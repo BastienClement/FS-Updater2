@@ -10,7 +10,7 @@ import scalafxml.core.{FXMLView, NoDependencyResolver}
 object Launcher extends JFXApp {
 	val ConfDir: File = new File(System.getProperty("user.home"), ".fs-updater")
 
-	val root = FXMLView(getClass.getResource("form/updater.fxml"), NoDependencyResolver)
+	val root = FXMLView(getClass.getClassLoader.getResource("updater.fxml"), NoDependencyResolver)
 
 	stage = new PrimaryStage {
 		title = "FS-Updater"

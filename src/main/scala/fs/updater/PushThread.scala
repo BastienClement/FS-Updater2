@@ -5,7 +5,6 @@ import com.mashape.unirest.http.Unirest
 object PushThread {
 	def start(update: () => Unit): Unit = {
 		val connect = Unirest.get("https://addons.fromscratch.gg/client/connect").asString().getBody
-		println(connect)
 		val hub = new Thread(() => {
 			var last = System.currentTimeMillis()
 			while (true) {
