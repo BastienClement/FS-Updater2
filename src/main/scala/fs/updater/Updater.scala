@@ -49,6 +49,7 @@ class Updater (val addonsPath: TextField,
 	def init(): Unit = {
 		ensureValidAddonsFolder()
 		update()
+		PushThread.start(update)
 	}
 
 	@tailrec
