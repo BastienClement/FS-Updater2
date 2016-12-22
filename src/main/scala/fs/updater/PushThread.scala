@@ -2,7 +2,15 @@ package fs.updater
 
 import com.mashape.unirest.http.Unirest
 
+/**
+  * Listener thread for Instant-Update notifications.
+  */
 object PushThread {
+	/**
+	  * Starts the push listener thread
+	  *
+	  * @param update the function to call when an update is available
+	  */
 	def start(update: () => Unit): Unit = {
 		val connect = Unirest.get("https://addons.fromscratch.gg/client/connect").asString().getBody
 		val hub = new Thread(() => {
@@ -17,7 +25,7 @@ object PushThread {
 					exec(update())
 					last = System.currentTimeMillis()
 				} catch {
-					case e: Throwable =>	// ignored
+					case e: Throwable => // ignored
 				}
 			}
 		})

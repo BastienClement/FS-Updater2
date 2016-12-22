@@ -16,10 +16,24 @@ import scalafx.stage.{Modality, Stage}
   * OAuth management stuff
   */
 object OAuth {
+	/**
+	  * Fetches the current access token, if available.
+	  */
 	private def accessToken: Option[String] = Option(LocalSettings.get("oauth.token"))
+
+	/**
+	  * Fetches the current refresh token, if availble.
+	  */
 	private def refreshCode: Option[String] = Option(LocalSettings.get("oauth.refresh"))
 
+	/**
+	  * Time of the next token status recheck
+	  */
 	private var recheck: Deadline = Deadline.now
+
+	/**
+	  * Cached username of the authenticated user
+	  */
 	private var cachedUsername: String = "Guest"
 
 	/**
@@ -145,6 +159,10 @@ object OAuth {
 		}
 	}
 
+	/**
+	  * Authentication failure handler.
+	  * Displays an error and exit the application.
+	  */
 	def failure(): Unit = exec {
 		new Alert(AlertType.Error) {
 			initOwner(Launcher.stage)

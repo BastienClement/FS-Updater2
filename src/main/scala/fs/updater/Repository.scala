@@ -7,9 +7,20 @@ import java.util.Comparator
 import java.util.concurrent.Semaphore
 import java.util.zip.ZipFile
 
+/**
+  * The addon repository manager.
+  */
 object Repository {
+	/**
+	  * The exclusive lock to the repository
+	  */
 	private val lock = new Semaphore(1)
 
+	/**
+	  * Shedules an exclusive task to run with the respository.
+	  *
+	  * @param task the task to execute
+	  */
 	def schedule(task: => Unit): Unit = {
 		new Thread(() => {
 			lock.acquire()
@@ -21,24 +32,72 @@ object Repository {
 		}).start()
 	}
 
-	private val addons = new PropertyFile(ConfRoot / "addons.properties")
+	/**
+	  * The installed addons list
+	  */
+	private val addons = new PropertiesFile(ConfRoot / "addons.properties")
 
+	/**
+	  * The WoW addons folder
+	  */
 	def addonsFolder: File = Option(LocalSettings.get("addons.folder")).map(new File(_)).orNull
 
+	/**
+	  * Whether the defined addon folder is valid
+	  */
 	def addonsFolderValid: Boolean = addonsFolderValid(addonsFolder)
 
+	/**
+	  * Whether the given folder is a valid addons folder.
+	  *
+	  * @param folder the folder to check
+	  */
 	def addonsFolderValid(folder: File): Boolean =
 		folder != null && folder.isDirectory && (folder.getParentFile.getParentFile / "WoW.mfil").isFile
 
+	/**
+	  * Defines the addons folder to use.
+	  *
+	  * If the given folder is not valid, it is ignored.
+	  *
+	  * @param folder the folder to use
+	  */
 	def setAddonsFolder(folder: File): Unit =
 		if (addonsFolderValid(folder)) LocalSettings.set("addons.folder", folder.getAbsolutePath)
 
+	/**
+	  * The manifest file for a given addon.
+	  *
+	  * @param name the addon name
+	  */
 	private def addonManifest(name: String): File = ConfRoot / s"manifest-$name.properties"
 
+	/**
+	  * Checks if an addon is enabled.
+	  *
+	  * @param name the addon name
+	  */
 	def addonEnabled(name: String): Boolean = currentRevision(name) != null
+
+	/**
+	  * Checks if an addon is physically present in the addons folder.
+	  *
+	  * @param name the addon name
+	  */
 	def addonPresent(name: String): Boolean = (addonsFolder / name).exists
+
+	/**
+	  * The currently installed revision of an addon.
+	  *
+	  * @param name the addon name
+	  */
 	def currentRevision(name: String): String = addons.get(name)
 
+	/**
+	  * Installs an addon.
+	  *
+	  * @param addon the addon to install
+	  */
 	def install(addon: Addon): Unit = {
 		UpdaterStatusInstance.start(s"Downloading: ${ addon.name }")
 		val source = Unirest.get(s"https://addons.fromscratch.gg/${ addon.file }")
@@ -71,7 +130,7 @@ object Repository {
 		}
 		zip.close()
 
-		val manifest = new PropertyFile(addonManifest(addon.name))
+		val manifest = new PropertiesFile(addonManifest(addon.name))
 		folders.foreach(manifest.set(_, ""))
 
 		archive.delete()
@@ -80,10 +139,15 @@ object Repository {
 		updateRepositoryData()
 	}
 
+	/**
+	  * Uninstalls an addon.
+	  *
+	  * @param addon the addon to uninstall
+	  */
 	def uninstall(addon: Addon): Unit = {
 		UpdaterStatusInstance.start(s"Uninstalling: ${ addon.name }")
 		val manifestFile = addonManifest(addon.name)
-		val manifest = new PropertyFile(manifestFile)
+		val manifest = new PropertiesFile(manifestFile)
 		for (root <- manifest.keys) {
 			Files.walk((addonsFolder / root).toPath).sorted(Comparator.reverseOrder()).forEachOrdered(Files.delete _)
 		}
@@ -93,12 +157,22 @@ object Repository {
 		updateRepositoryData()
 	}
 
+	/**
+	  * Updates an addon.
+	  *
+	  * @param addon the addon to update
+	  */
 	def update(addon: Addon): Unit = {
 		uninstall(addon)
 		install(addon)
 		UpdaterStatusInstance.stop(s"Updated: ${ addon.name }")
 	}
 
+	/**
+	  * Resets the cached state of an addon. Effectively unmarking it as installed.
+	  *
+	  * @param name the addon name
+	  */
 	def reset(name: String): Unit = {
 		addons.set(name, null)
 		val manifest = addonManifest(name)
@@ -106,6 +180,9 @@ object Repository {
 		updateRepositoryData()
 	}
 
+	/**
+	  * Updates FS_UpdaterStatus respository data.
+	  */
 	private def updateRepositoryData(): Unit = {
 		if (addonEnabled("FS_UpdaterStatus")) {
 			val out = new StringBuilder
